@@ -37,7 +37,22 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+include(GoogleTest)
 ##### END GOOGLE TEST INSTALLATION #####
+
+##### BEGIN COMPILER INSTALLATION #####
+link_libraries(antlr4-runtime)
+include_directories(/usr/local/include/antlr4-runtime)
+
+find_package(LLVM REQUIRED CONFIG)
+
+
+include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+
+link_libraries(LLVM-14)
+##### END COMPILER INSTALLATION #####
 
 add_subdirectory(third_party/simdjson EXCLUDE_FROM_ALL)
 

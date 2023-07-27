@@ -8,6 +8,7 @@ if(MSVC)
   remove_definitions(NDEBUG)
 endif()
 
+
 #Function to automate building test binaries
 FUNCTION(ADD_FISHSTORE_TEST TEST_NAME HEADERS)
   add_executable(${TEST_NAME} ${HEADERS} ${TEST_NAME}.cc)
@@ -17,7 +18,7 @@ FUNCTION(ADD_FISHSTORE_TEST TEST_NAME HEADERS)
   else()
     target_compile_options(${TEST_NAME} PRIVATE -UNDEBUG)
   endif()
-  add_test(${TEST_NAME} ${CMAKE_BINARY_DIR}/${TEST_NAME})
+  gtest_discover_tests(${TEST_NAME})
 ENDFUNCTION()
 
 ADD_FISHSTORE_TEST(in_memory_test "")
@@ -32,3 +33,5 @@ ADD_FISHSTORE_TEST(checkpoint_threadpool_test "checkpoint_test.h")
 endif()
 
 ADD_FISHSTORE_TEST(simdjson_adapter_test "")
+
+add_subdirectory(ezpsf)
