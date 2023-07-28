@@ -79,6 +79,12 @@ namespace fishstore::ezpsf {
         llvm::raw_fd_ostream module_out(name + ".txt", ec);
         llvm_consts::module->print(module_out, nullptr);
 
+        // setup symbol table
+        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), jit->getDataLayout());
+        auto builtin_symbols = llvm::orc::absoluteSymbols(type_conversion::getSymbolTable(mangle));
+        LLVM_ERROR_CHECK(jit->getMainJITDylib().define(builtin_symbols));
+
+
         llvm::orc::ThreadSafeModule ts_module(std::move(llvm_consts::module), std::move(llvm_consts::ctx));
         LLVM_ERROR_CHECK(jit->addIRModule(std::move(ts_module)));
 

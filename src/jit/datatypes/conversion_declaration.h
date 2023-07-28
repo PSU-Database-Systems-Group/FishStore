@@ -13,12 +13,20 @@ namespace fishstore::ezpsf {
     struct StringRef {
         const char *data;
         uint64_t size;
+
+        const char *Data() const { return data; }
+
+        uint64_t Length() const { return size; }
     };
     namespace type_conversion {
         template<typename T>
         struct GenericNullable {
             bool hasValue;
             T value;
+
+            bool HasValue() const { return hasValue; }
+
+            T Value() const { return value; }
         };
 
         typedef GenericNullable<bool> NullableBool;
@@ -30,6 +38,7 @@ namespace fishstore::ezpsf {
         // for a given Adapter
         template<typename A>
         class TypeConversion {
+        public:
             typedef std::vector<typename A::field_t> record_t;
 
             static void getBool(EzRecord *record, uint64_t field_identifier, NullableBool *return_ptr) {
