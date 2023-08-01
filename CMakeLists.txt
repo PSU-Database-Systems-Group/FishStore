@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.9) # CMP0069 NEW
 
 enable_testing()
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 include(ExternalProject)
 project(FishStore)
 
@@ -41,8 +43,25 @@ include(GoogleTest)
 ##### END GOOGLE TEST INSTALLATION #####
 
 ##### BEGIN COMPILER INSTALLATION #####
-link_libraries(antlr4-runtime)
-include_directories(/usr/local/include/antlr4-runtime)
+
+add_definitions(-DANTLR4CPP_STATIC)
+
+# using /MD flag for antlr4_runtime (for Visual C++ compilers only)
+set(ANTLR4_WITH_STATIC_CRT OFF)
+
+# Specify the version of the antlr4 library needed for this project.
+# By default the latest version of antlr4 will be used.  You can specify a
+# specific, stable version by setting a repository tag value or a link
+# to a zip file containing the libary source.
+set(ANTLR4_TAG 4.10.1)
+#set(ANTLR4_ZIP_REPOSITORY https://github.com/antlr/antlr4/archive/refs/tags/4.10.1.zip)
+
+# add external build for antlrcpp
+include(ExternalAntlr4Cpp)
+# add antrl4cpp artifacts to project environment
+include_directories(${ANTLR4_INCLUDE_DIRS})
+
+##### End of Antlr, start of LLVM #####
 
 find_package(LLVM REQUIRED CONFIG)
 
