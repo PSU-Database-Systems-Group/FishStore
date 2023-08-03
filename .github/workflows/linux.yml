@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y g++ libaio-dev uuid-dev libtbb-dev
 
+      - name: Install LLVM 14
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 14
+
       - name: Create Build Environment
         # Some projects don't allow in-source building, so create a separate build directory
         # We'll use this as our working directory for all subsequent commands
