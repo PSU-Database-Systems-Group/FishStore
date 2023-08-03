@@ -63,7 +63,7 @@ include_directories(${ANTLR4_INCLUDE_DIRS})
 
 ##### End of Antlr, start of LLVM #####
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 14 REQUIRED CONFIG)
 
 
 include_directories(${LLVM_INCLUDE_DIRS})
