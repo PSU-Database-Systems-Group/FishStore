@@ -54,7 +54,7 @@ set(ANTLR4_WITH_STATIC_CRT OFF)
 # specific, stable version by setting a repository tag value or a link
 # to a zip file containing the libary source.
 #set(ANTLR4_TAG 4.10.1)
-set(ANTLR4_ZIP_REPOSITORY https://github.com/antlr/antlr4/archive/refs/tags/4.10.1.zip)
+#set(ANTLR4_ZIP_REPOSITORY https://github.com/antlr/antlr4/archive/refs/tags/4.10.1.zip)
 
 # add external build for antlrcpp
 include(ExternalAntlr4Cpp)
@@ -70,7 +70,6 @@ include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-link_libraries(LLVM-14)
 ##### END COMPILER INSTALLATION #####
 
 add_subdirectory(third_party/simdjson EXCLUDE_FROM_ALL)
