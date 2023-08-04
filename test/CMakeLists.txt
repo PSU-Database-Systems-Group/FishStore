@@ -1,7 +1,7 @@
 if(WIN32)
-  set (FISHSTORE_TEST_LINK_LIBS fishstore rpcrt4 gtest LLVM-14 antlr4-runtime)
+  set (FISHSTORE_TEST_LINK_LIBS fishstore rpcrt4 gtest)
 else()
-  set (FISHSTORE_TEST_LINK_LIBS fishstore stdc++fs uuid tbb gcc aio m stdc++ pthread dl gtest LLVM-14 antlr4-runtime)
+  set (FISHSTORE_TEST_LINK_LIBS fishstore stdc++fs uuid tbb gcc aio m stdc++ pthread dl gtest)
 endif()
 
 if(MSVC)

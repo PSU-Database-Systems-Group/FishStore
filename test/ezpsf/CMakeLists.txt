@@ -1,6 +1,6 @@
 # cmake for ezpsf tests
 
-set(EZPSF_TEST_LINK_LIBS GTest::gtest_main LLVM-14 antlr4-runtime fishstore)
+set(EZPSF_TEST_LINK_LIBS GTest::gtest_main fishstore)
 
 
 FUNCTION(ADD_EZPSF_TEST TEST_NAME)
