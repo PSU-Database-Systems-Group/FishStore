@@ -4044,6 +4044,9 @@ return OperationStatus::SUCCESS;
             auto it = field_lookup_map.find(field);
             if (it != field_lookup_map.end()) {
                 field_id = it->second;
+            } else {
+                // You may register a field on the fly during making predicates in json.
+                field_id = static_cast<uint16_t>(field_names.size());
                 field_names.push_back(field);
                 field_lookup_map[field] = field_id;
             }
