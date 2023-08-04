@@ -15,11 +15,10 @@
 
 namespace fishstore::ezpsf::ast {
 
-    template<typename A>
     class EzPsfVisitor : public ezpsfVisitor {
     public:
         explicit EzPsfVisitor() {
-            ast::EzPsfInit<A>();
+            ast::EzPsfInit();
         }
 
         std::unique_ptr<PsfFunctionAst> createPsf(ezpsfParser::PsfContext *ctx) {

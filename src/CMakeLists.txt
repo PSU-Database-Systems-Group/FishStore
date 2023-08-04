@@ -84,3 +84,5 @@ else ()
 endif ()
 
 add_library(fishstore STATIC ${FISHSTORE_SOURCES} ${FISHSTORE_HEADERS})
+target_link_libraries(fishstore LLVM-14)
+target_link_libraries(fishstore antlr4_static)

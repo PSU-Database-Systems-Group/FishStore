@@ -23,10 +23,17 @@ namespace fishstore::ezpsf {
         std::vector<std::string> fields;
     };
 
-    // Generates an EzPsf based upon the string.
     // The adapter template must support the following:
-    // - typename A::field_t (the field type) which contain
+    // - typename A::field_t (the field type) which contains the NullableMethods defined in
+    // datatypes/conversion_declaration.h
     template<typename A>
+    void initJit(llvm::orc::LLJIT *jit) {
+        // setup symbol table
+        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), jit->getDataLayout());
+        auto builtin_symbols = llvm::orc::absoluteSymbols(ezpsf::type_conversion::getSymbolTable<A>(mangle));
+        LLVM_ERROR_CHECK(jit->getMainJITDylib().define(builtin_symbols));
+    }
+
     PsfInfo getPsf(const std::string &str, llvm::orc::LLJIT *jit) {
         class : public antlr4::ANTLRErrorListener {
         public:
@@ -68,7 +75,7 @@ namespace fishstore::ezpsf {
         auto psf = parser.psf();
 
 
-        ast::EzPsfVisitor<A> visitor;
+        ast::EzPsfVisitor visitor;
         auto psf_ast = visitor.createPsf(psf);
         auto func = psf_ast->generate();
         std::string name = func->getName().str();
@@ -78,11 +85,6 @@ namespace fishstore::ezpsf {
         std::error_code ec;
         llvm::raw_fd_ostream module_out(name + ".txt", ec);
         llvm_consts::module->print(module_out, nullptr);
-
-        // setup symbol table
-        llvm::orc::MangleAndInterner mangle(jit->getExecutionSession(), jit->getDataLayout());
-        auto builtin_symbols = llvm::orc::absoluteSymbols(type_conversion::getSymbolTable(mangle));
-        LLVM_ERROR_CHECK(jit->getMainJITDylib().define(builtin_symbols));
 
 
         llvm::orc::ThreadSafeModule ts_module(std::move(llvm_consts::module), std::move(llvm_consts::ctx));

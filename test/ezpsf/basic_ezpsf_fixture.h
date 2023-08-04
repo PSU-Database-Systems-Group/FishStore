@@ -28,7 +28,7 @@ protected:
     std::map<std::string, uint64_t> fields;
 
     PsfInfo getPsf(const std::string &psf_body) {
-        return fishstore::ezpsf::getPsf<TestAdapter>(psf_body, jit.get());
+        return fishstore::ezpsf::getPsf(psf_body, jit.get());
     }
 
     void SetUp() override {
@@ -50,6 +50,9 @@ protected:
         ASSERT_TRUE((bool) expected_jit);
 
         jit = std::move(expected_jit.get());
+
+        // setup symbol table
+        initJit<TestAdapter>(jit.get());
     }
 
 

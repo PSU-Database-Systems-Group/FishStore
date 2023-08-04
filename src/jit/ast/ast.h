@@ -16,18 +16,7 @@
 namespace fishstore::ezpsf::ast {
 
     // Initializes everything using a given adapter
-    template<class A>
     void EzPsfInit() {
-        /////////////////////////////////////////////////////
-        // Set up the Function Pointers for the adapter
-        /////////////////////////////////////////////////////
-
-        type_conversion::FUNC_GET_BOOL = type_conversion::TypeConversion<A>::getBool;
-        type_conversion::FUNC_GET_INT32 = type_conversion::TypeConversion<A>::getInt32;
-        type_conversion::FUNC_GET_INT64 = type_conversion::TypeConversion<A>::getInt64;
-        type_conversion::FUNC_GET_DOUBLE = type_conversion::TypeConversion<A>::getDouble;
-        type_conversion::FUNC_GET_STR = type_conversion::TypeConversion<A>::getStringRef;
-
         /////////////////////////////////////////////////////
         // Setup JIT stuff
         /////////////////////////////////////////////////////

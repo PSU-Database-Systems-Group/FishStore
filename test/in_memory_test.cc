@@ -8,6 +8,14 @@
 
 #define _NULL_DISK
 
+#ifdef USE_EZPSF
+#define CLASS InMemFishStoreEzPsf
+#else
+#define CLASS InMemFishStore
+#endif
+
+
+
 #include "adapters/simdjson_adapter.h"
 #include "core/fishstore.h"
 #include "device/null_disk.h"
@@ -157,11 +165,16 @@ private:
   const char* value_;
 };
 
-TEST(InMemFishStore, Ingest_Serial) {
+TEST(CLASS, Ingest_Serial) {
   store_t store{ 1LL << 24, 1LL << 30, "" };
   store.StartSession();
-  auto id_proj = store.MakeProjection("id");
-  auto gender_proj = store.MakeProjection("gender");
+  #ifdef USE_EZPSF
+    auto id_proj = store.MakeEzPsf("(Str) id").id;
+    auto gender_proj = store.MakeEzPsf("(Str) gender").id;
+  #else
+    auto id_proj = store.MakeProjection("id");
+    auto gender_proj = store.MakeProjection("gender");
+  #endif
   std::vector<ParserAction> actions;
   actions.push_back({ REGISTER_GENERAL_PSF, id_proj });
   actions.push_back({ REGISTER_GENERAL_PSF, gender_proj });
@@ -210,11 +223,16 @@ TEST(InMemFishStore, Ingest_Serial) {
   ASSERT_EQ(cnt, n_records);
 }
 
-TEST(InMemFishStore, Ingest_Concurrent) {
+TEST(CLASS, Ingest_Concurrent) {
   store_t store{ 1LL << 24, 1LL << 30, "" };
   store.StartSession();
-  auto id_proj = store.MakeProjection("id");
-  auto gender_proj = store.MakeProjection("gender");
+    #ifdef USE_EZPSF
+    auto id_proj = store.MakeEzPsf("(Str) id").id;
+    auto gender_proj = store.MakeEzPsf("(Str) gender").id;
+    #else
+    auto id_proj = store.MakeProjection("id");
+    auto gender_proj = store.MakeProjection("gender");
+    #endif
   std::vector<ParserAction> actions;
   actions.push_back({ REGISTER_GENERAL_PSF, id_proj });
   actions.push_back({ REGISTER_GENERAL_PSF, gender_proj });
@@ -276,11 +294,16 @@ TEST(InMemFishStore, Ingest_Concurrent) {
   store.StopSession();
 }
 
-TEST(InMemFishStore, FullScan) {
+TEST(CLASS, FullScan) {
   store_t store{ 1LL << 24, 1LL << 30, "" };
   store.StartSession();
-  auto id_proj = store.MakeProjection("id");
-  auto gender_proj = store.MakeProjection("gender");
+    #ifdef USE_EZPSF
+    auto id_proj = store.MakeEzPsf("(Str) id").id;
+    auto gender_proj = store.MakeEzPsf("(Str) gender").id;
+    #else
+    auto id_proj = store.MakeProjection("id");
+    auto gender_proj = store.MakeProjection("gender");
+    #endif
   std::vector<ParserAction> actions;
   actions.push_back({ REGISTER_GENERAL_PSF, id_proj });
   actions.push_back({ REGISTER_GENERAL_PSF, gender_proj });
