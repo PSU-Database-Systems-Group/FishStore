@@ -12,7 +12,11 @@
 
 using handler_t = fishstore::environment::QueueIoHandler;
 
+#ifdef USE_EZPSF
+#define CLASS IngestTest_QueueEzPsf
+#else
 #define CLASS IngestTest_Queue
+#endif
 #include "ingest_test.h"
 #undef CLASS
 

@@ -11,6 +11,12 @@
 #include <device/file_system_disk.h>
 #include "core/fishstore.h"
 
+#ifdef USE_EZPSF
+#define CLASS RegistrationEzPsf
+#else
+#define CLASS Registration
+#endif
+
 using handler_t = fishstore::environment::QueueIoHandler;
 
 using namespace fishstore::core;
@@ -170,12 +176,16 @@ private:
   const char* value_;
 };
 
-TEST(Registration, Register_Concurrent) {
+TEST(CLASS, Register_Concurrent) {
   std::experimental::filesystem::remove_all("test");
   std::experimental::filesystem::create_directories("test");
   store_t store{ 8192, 201326592, "test" };
   store.StartSession();
-  auto school_id_proj = store.MakeProjection("school.id");
+    #ifdef USE_EZPSF
+    auto school_id_proj = store.MakeEzPsf("(Str) school.id").id;
+    #else
+    auto school_id_proj = store.MakeProjection("school.id");
+    #endif
   std::vector<ParserAction> actions;
   actions.push_back({ REGISTER_GENERAL_PSF, school_id_proj });
   
@@ -238,12 +248,16 @@ TEST(Registration, Register_Concurrent) {
   store.StopSession();
 }
 
-TEST(Registration, Deregister_Concurrent) {
+TEST(CLASS, Deregister_Concurrent) {
   std::experimental::filesystem::remove_all("test");
   std::experimental::filesystem::create_directories("test");
   store_t store{ 8192, 201326592, "test" };
   store.StartSession();
-  auto school_id_proj = store.MakeProjection("school.id");
+    #ifdef USE_EZPSF
+    auto school_id_proj = store.MakeEzPsf("(Str) school.id").id;
+    #else
+    auto school_id_proj = store.MakeProjection("school.id");
+    #endif
   std::vector<ParserAction> actions;
   actions.push_back({ REGISTER_GENERAL_PSF, school_id_proj });
   uint64_t safe_register_address, safe_unregister_address;

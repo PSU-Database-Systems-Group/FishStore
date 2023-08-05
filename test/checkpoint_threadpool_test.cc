@@ -11,8 +11,11 @@
 #include <device/file_system_disk.h>
 
 using handler_t = fishstore::environment::ThreadPoolIoHandler;
-
+#ifdef USE_EZPSF
+#define CLASS CheckpointTest_ThreadPoolEzPsf
+#else
 #define CLASS CheckpointTest_ThreadPool
+#endif
 #include "checkpoint_test.h"
 #undef CLASS
 
