@@ -7,6 +7,8 @@
 #pragma once
 
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/IRReader/IRReader.h>
 
 #include "jit/ezpsf_visitor.h"
 
@@ -21,6 +23,7 @@ namespace fishstore::ezpsf {
         std::string name;
         fishstore::ezpsf::DataType type;
         std::vector<std::string> fields;
+        std::string ir;
     };
 
     // The adapter template must support the following:
@@ -82,10 +85,13 @@ namespace fishstore::ezpsf {
 
 
         // output to a file
-        std::error_code ec;
-        llvm::raw_fd_ostream module_out(name + ".txt", ec);
-        llvm_consts::module->print(module_out, nullptr);
+//        std::error_code ec;
+//        llvm::raw_fd_ostream module_out(name + ".txt", ec);
+//        llvm_consts::module->print(module_out, nullptr);
 
+        std::string psf_ir;
+        llvm::raw_string_ostream module_out(psf_ir);
+        llvm_consts::module->print(module_out, nullptr);
 
         llvm::orc::ThreadSafeModule ts_module(std::move(llvm_consts::module), std::move(llvm_consts::ctx));
         LLVM_ERROR_CHECK(jit->addIRModule(std::move(ts_module)));
@@ -95,6 +101,22 @@ namespace fishstore::ezpsf {
         auto psf_func_ptr = (EzPsf) expected_symbol->getAddress();
         auto ret_type = psf_ast->return_type;
         auto fields = psf_ast->fields;
-        return {psf_func_ptr, name, ret_type, fields};
+        return {psf_func_ptr, name, ret_type, fields, psf_ir};
+    }
+
+    // recovers a PSF from IR. It assumes some information is already saved, and only gets the function pointer
+    // back.
+    EzPsf recoverPsf(const std::string &name, const std::string &ir, llvm::orc::LLJIT *jit) {
+        auto buffer = llvm::MemoryBuffer::getMemBuffer(ir);
+        llvm::SMDiagnostic smd;
+        auto recovered_ctx = std::make_unique<llvm::LLVMContext>();
+        auto recovered_module = llvm::parseIR(*buffer, smd, *recovered_ctx);
+
+        llvm::orc::ThreadSafeModule ts_module(std::move(recovered_module), std::move(recovered_ctx));
+        LLVM_ERROR_CHECK(jit->addIRModule(std::move(ts_module)));
+
+        auto expected_symbol = jit->lookup(name);
+        ASSERT(expected_symbol);
+        return (EzPsf) expected_symbol->getAddress();
     }
 }

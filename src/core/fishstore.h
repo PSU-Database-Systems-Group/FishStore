@@ -570,6 +570,9 @@ namespace fishstore::core {
         // JIT stuff
         std::unique_ptr<llvm::orc::LLJIT> jit;
         std::unordered_map<std::string, PsfLookup> named_psfs;
+
+        // maps a PSF name to it's IR. This is used later for recovery.
+        std::unordered_map<std::string, std::string> psf_irs;
     };
 
 // Implementations.
@@ -1001,9 +1004,8 @@ namespace fishstore::core {
                     if (psf.lib_id == LIB_EZ_PSF) {
                         int32_t value;
                         bool has_value = psf.ez_eval(&psf_args, &value);
-                        res={!has_value, value};
-                    }
-                    else
+                        res = {!has_value, value};
+                    } else
                         res = psf.eval_(psf_args);
                     if (!res.is_null) {
                         kpts.emplace_back(KPTUtil{inline_psf_id, res.value});
@@ -3598,6 +3600,13 @@ return OperationStatus::SUCCESS;
         for (auto &lib: libs) {
             fprintf(naming_file, "%s\n", lib.path.string().c_str());
         }
+
+        // save IRs
+        fprintf(naming_file, "%zu\n", psf_irs.size());
+        for (const auto &ir_pair: psf_irs) {
+            fprintf(naming_file, "%s %s\n", ir_pair.first.c_str(), ir_pair.second.c_str());
+        }
+
         fprintf(naming_file, "%zu\n", general_psf_map.size());
         for (const GeneralPSF<A> &psf: general_psf_map) {
             fprintf(naming_file, "%zu", psf.fields.size());
@@ -3711,6 +3720,19 @@ return OperationStatus::SUCCESS;
             libs.emplace_back(lib);
         }
 
+
+        std::unordered_map<std::string, ezpsf::EzPsf> restored_ez_psfs;
+        // restore IRs
+        size_t n_irs;
+        naming_file >> n_irs;
+        for (size_t i = 0; i < n_irs; ++i) {
+            std::string name, ir;
+            naming_file >> name >> ir;
+            psf_irs.insert({name, ir});
+            auto func_ptr = ezpsf::recoverPsf(name, ir, jit.get());
+            restored_ez_psfs.insert({name, func_ptr});
+        }
+
         size_t n_general_psf;
         naming_file >> n_general_psf;
         for (size_t i = 0; i < n_general_psf; ++i) {
@@ -3727,14 +3749,16 @@ return OperationStatus::SUCCESS;
             naming_file >> lib_id >> func_name;
             psf.lib_id = lib_id;
             psf.func_name = func_name;
-            if (psf.lib_id != -1) {
+            if (psf.lib_id == LIB_PROJECTION) {
+                psf.eval_ = projection<A>;
+            } else if (psf.lib_id == LIB_EZ_PSF) {
+                psf.ez_eval = restored_ez_psfs.at(func_name);
+            } else {
 #ifdef _WIN32
                 psf.eval_ = (general_psf_t<A>)GetProcAddress(libs[lib_id].handle, func_name.c_str());
 #else
                 psf.eval_ = (general_psf_t <A>) dlsym(libs[lib_id].handle, func_name.c_str());
 #endif
-            } else {
-                psf.eval_ = projection<A>;
             }
             assert(psf.eval_);
             general_psf_map.push_back(psf);
@@ -3756,7 +3780,11 @@ return OperationStatus::SUCCESS;
             naming_file >> lib_id >> func_name;
             psf.lib_id = lib_id;
             psf.func_name = func_name;
-            if (psf.lib_id != -1) {
+            if (psf.lib_id == LIB_PROJECTION) {
+                LOG("Illegal State! Inline PSFs cannot be projections!");
+            } else if (psf.lib_id == LIB_EZ_PSF) {
+                psf.ez_eval = restored_ez_psfs.at(func_name);
+            } else {
 #ifdef _WIN32
                 psf.eval_ = (inline_psf_t<A>)GetProcAddress(libs[lib_id].handle, func_name.c_str());
 #else
@@ -4035,6 +4063,8 @@ return OperationStatus::SUCCESS;
     template<class D, class A>
     PsfLookup FishStore<D, A>::MakeEzPsf(const std::string &ez_psf_str) {
         ezpsf::PsfInfo psf_info = ezpsf::getPsf(ez_psf_str, jit.get());
+        psf_irs.insert({psf_info.name, psf_info.ir});
+
         std::vector<uint16_t> field_ids;
         field_ids.reserve(psf_info.fields.size());
 

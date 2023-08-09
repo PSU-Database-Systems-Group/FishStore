@@ -33,6 +33,9 @@ namespace fishstore {
         template<class A>
         using general_psf_t = NullableStringRef(*)(const std::vector<typename A::field_t> &);
 
+        // if library id is >= 0, then it is considered an external library.
+        // if library id is == -1, then it is a projection
+        // if library id is == -2, then it is an EzPsf
         constexpr int64_t LIB_PROJECTION = -1;
         constexpr int64_t LIB_EZ_PSF = -2;
 
