@@ -1595,14 +1595,14 @@ tot_memcpy_time += std::chrono::duration<double>(t_memcpy_end - t_memcpy_start).
             if (current_page < hlog.head_address.load().page()) break;
 
             // Scan the page, record by record to the end of the page or current tail.
-            while (address < to_address) {
+            while (address <= to_address) {
                 record_t *record = reinterpret_cast<record_t *>(hlog.Get(address));
                 if (record->header.IsNull()) {
                     address += sizeof(RecordInfo);
                     continue;
                 }
 
-                if (address <= start_address) {
+                if (address < start_address) {
                     address += record->size();
                     continue;
                 }
