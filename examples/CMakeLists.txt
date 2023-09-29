@@ -16,3 +16,5 @@ add_subdirectory(twitter_query-dir)
 add_subdirectory(online_demo-dir)
 add_subdirectory(online_demo_disk-dir)
 add_subdirectory(checkpoint_recovery-dir)
+
+add_subdirectory(scheduling_demo)
