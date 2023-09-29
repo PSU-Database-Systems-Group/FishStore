@@ -171,6 +171,12 @@ namespace fishstore {
 
             SIMDJsonRecord(ondemand::document_reference doc, const std::vector<SIMDJsonFieldLookup> &lookups) {
                 obj = doc.get_object();
+
+                auto ref = obj.raw_json().value();
+                raw_text = {ref.data(), ref.length()};
+                obj.reset();
+
+
                 int i = 0;
                 for (const auto &lookup: lookups) {
                     const auto value = lookup.find(obj);
@@ -187,13 +193,12 @@ namespace fishstore {
             }
 
             inline StringRef GetRawText() const {
-                obj.reset();
-                auto ref = obj.raw_json().value();
-                return {ref.data(), ref.length()};
+                return raw_text;
             }
 
         public:
             mutable ondemand::object obj;
+            StringRef raw_text;
             std::vector<SIMDJsonField> fields;
         };
 
@@ -217,6 +222,7 @@ namespace fishstore {
             }
 
             inline const SIMDJsonRecord &NextRecord() {
+                assert(docs_it != docs.end());
                 record = SIMDJsonRecord(*docs_it, field_lookups);
                 ++docs_it;
                 return record;
@@ -259,4 +265,3 @@ namespace fishstore {
         };
     }
 }
-
