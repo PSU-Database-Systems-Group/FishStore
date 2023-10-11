@@ -30,13 +30,18 @@ TEST(SimdJsonTests, BasicTest1) {
     std::string raw_text_str = {raw_text.Data(), raw_text.Length()};
 
     // verify raw text
-    const std::string correct_text = R"({"id":3, "school":{"id":6}, "random":"garbage13"})";
+    const std::string correct_text = R"({"id":3, "school":{"id":6}, "random":"garbage13"}
+)";
     ASSERT_EQ(raw_text_str, correct_text);
 
     // check int
     auto n = fields[0].GetAsInt();
     ASSERT_TRUE(n.HasValue());
     ASSERT_EQ(n.Value(), 3);
+
+    auto m = fields[1].GetAsInt();
+    ASSERT_TRUE(m.HasValue());
+    ASSERT_EQ(m.Value(), 6);
 
     // get raw again
     raw_text = rec.GetRawText();
