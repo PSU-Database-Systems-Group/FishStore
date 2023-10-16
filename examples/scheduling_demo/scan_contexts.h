@@ -115,6 +115,59 @@ private:
 };
 
 
+typedef fishstore::adapter::StringRef StringRef;
+
+// context used for joins
+template<typename A>
+class JoinContext : public IAsyncContext {
+    typedef typename A::parser_t parser_t;
+    typedef typename A::record_t record_t;
+    typedef typename A::field_t field_t;
+
+public:
+    JoinContext() = delete;
+
+    ~JoinContext() override { delete parser; }
+
+    JoinContext(const std::string &join_key, int id)
+            : parser(A::NewParser({join_key})),
+              id(id) {
+    }
+
+    inline void Touch(const char *payload, uint32_t payload_size) {
+        records.emplace_back(payload, payload_size);
+    }
+
+    inline void Finalize() {
+        printf("%u record for join id: %d\n", records.size(), id);
+    }
+
+    inline bool check(const char *payload, uint32_t payload_size) {
+        parser->Load(payload, payload_size);
+
+        // check to make sure the parser has a value
+        bool check = parser->HasNext();
+        assert(check);
+
+        record_t rec = parser->NextRecord();
+        assert(!parser->HasNext());
+
+
+        // check if id's match
+        return (rec.GetFields()[0].GetAsInt().Value() == id);
+    }
+
+protected:
+    Status DeepCopy_Internal(IAsyncContext *&context_copy) {
+        return IAsyncContext::DeepCopy_Internal(*this, context_copy);
+    }
+
+private:
+    std::vector<StringRef> records;
+    parser_t *parser;
+    int id;
+};
+
 // slow join without any special stuff
 template<typename D, typename A>
 class AdapterBadJoinContext : public IAsyncContext {
@@ -168,17 +221,7 @@ public:
         if (id.HasValue()) {
             int non_null_id = id.Value();
 
-            expr_func<int, A> scan_ctx = [non_null_id](expr_func_args<A> args) {
-                if (!args.empty()) {
-                    auto value = args[0].GetAsInt();
-                    if (value.HasValue() && value.Value() == non_null_id)
-                        return Nullable<int>(value.Value());
-                }
-
-                return Nullable<int>(); // return null
-            };
-
-
+            JoinContext<A> scan_ctx("id", non_null_id);
             inner->FullScan(scan_ctx, callback, 1);
             return true;
         }

@@ -20,7 +20,8 @@ using store_t = fishstore::core::FishStore<disk_t, adapter_t>;
 
 
 std::unique_ptr<store_t> storeFromFile(const std::string &file_path, int &psf_id) {
-    const std::string fishstore_file_name = "fishstore_out_" + file_path;
+    static int counter = 0;
+    const std::string fishstore_file_name = "fishstore_out_" + std::to_string(counter++);
     const size_t store_size = 1UL << 31;
     const size_t table_size = 1UL << 24;
 

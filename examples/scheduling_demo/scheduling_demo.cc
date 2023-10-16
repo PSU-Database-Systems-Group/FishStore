@@ -13,9 +13,9 @@ int main(int argc, char **argv) {
     int job_psf;
     int people_psf;
 
-    auto jobs = storeFromFile("/scratch/mnorfolk/ClionProjects/Forks/FishStore/examples/scheduling_demo/jobs.json",
+    auto jobs = storeFromFile("/scratch/mnorfolk/ClionProjects/FishStore/examples/scheduling_demo/jobs.json",
                               job_psf);
-    auto people = storeFromFile("/scratch/mnorfolk/ClionProjects/Forks/FishStore/examples/scheduling_demo/people.json",
+    auto people = storeFromFile("/scratch/mnorfolk/ClionProjects/FishStore/examples/scheduling_demo/people.json",
                                 people_psf);
 
 
@@ -30,18 +30,18 @@ int main(int argc, char **argv) {
     };
 
 
-//    AdapterFullScanContext<int, adapter_t> scan_context({"id"}, func);
-//    auto callback = [](IAsyncContext *ctxt, Status result) {
-//        assert(result == Status::Ok);
-//    };
+    AdapterFullScanContext<int, adapter_t> scan_context({"id"}, func);
+    auto callback = [](IAsyncContext *ctxt, Status result) {
+        assert(result == Status::Ok);
+    };
 
-//    auto start = std::chrono::steady_clock::now();
-//    people->FullScan(scan_context, callback, 1);
-//    people->CompletePending(true);
-//    auto end = std::chrono::steady_clock::now();
-//    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
-//              << std::endl;
-//
+    auto start = std::chrono::steady_clock::now();
+    people->FullScan(scan_context, callback, 1);
+    people->CompletePending(true);
+    auto end = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
+              << std::endl;
+
 //
 //    start = std::chrono::steady_clock::now();
 //    JsonInlineScanContext ez_psf_ctx(people_psf, 1);
@@ -51,16 +51,14 @@ int main(int argc, char **argv) {
 //    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (psf)" << std::endl;
 //
 
-    AdapterBadJoinContext<disk_t, adapter_t> scan_context({"id"}, jobs.get());
-    auto callback = [](IAsyncContext *ctxt, Status result) {
-        assert(result == Status::Ok);
-    };
+    AdapterBadJoinContext<disk_t, adapter_t> join_ctx({"id"}, jobs.get());
 
 
-    auto start = std::chrono::steady_clock::now();
-    people->FullScan(scan_context, callback, 1);
+
+     start = std::chrono::steady_clock::now();
+    people->FullScan(join_ctx, callback, 1);
     people->CompletePending(true);
-    auto end = std::chrono::steady_clock::now();
+    end = std::chrono::steady_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
               << std::endl;
 
