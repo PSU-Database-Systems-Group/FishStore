@@ -5,6 +5,9 @@
 
 #pragma once
 
+#include "adapters/simdjson_adapter.h"
+#include "core/fishstore.h"
+
 template<typename T>
 using Nullable = fishstore::adapter::Nullable<T>;
 
@@ -108,5 +111,87 @@ protected:
 private:
     uint32_t psf_id_;
     int32_t value_;
+    uint32_t cnt;
+};
+
+
+// slow join without any special stuff
+template<typename D, typename A>
+class AdapterBadJoinContext : public IAsyncContext {
+    typedef typename A::parser_t parser_t;
+    typedef typename A::record_t record_t;
+    typedef typename A::field_t field_t;
+
+    typedef fishstore::core::FishStore<D, A> store_t;
+
+public:
+    AdapterBadJoinContext() = delete;
+
+    ~AdapterBadJoinContext() override { delete parser; }
+
+    AdapterBadJoinContext(const std::vector<std::string> &field_names, store_t *inner)
+            : parser(A::NewParser(field_names)),
+              inner(inner),
+              cnt(0) {
+
+    }
+
+    inline void Touch(const char *payload, uint32_t payload_size) {
+        // printf("Record Hit: %.*s\n", payload_size, payload);
+        ++cnt;
+    }
+
+    inline void Finalize() {
+        printf("%u record has been touched...\n", cnt);
+    }
+
+    inline bool check(const char *payload, uint32_t payload_size) {
+        parser->Load(payload, payload_size);
+
+        // check to make sure the parser has a value
+        bool check = parser->HasNext();
+        assert(check);
+
+        record_t rec = parser->NextRecord();
+        assert(!parser->HasNext());
+
+        auto raw_text = rec.GetRawText();
+
+        // evaluate
+        Nullable<int> id = rec.GetFields()[0].GetAsInt();
+
+        auto callback = [](IAsyncContext *ctxt, Status result) {
+            assert(result == Status::Ok);
+        };
+
+
+        if (id.HasValue()) {
+            int non_null_id = id.Value();
+
+            expr_func<int, A> scan_ctx = [non_null_id](expr_func_args<A> args) {
+                if (!args.empty()) {
+                    auto value = args[0].GetAsInt();
+                    if (value.HasValue() && value.Value() == non_null_id)
+                        return Nullable<int>(value.Value());
+                }
+
+                return Nullable<int>(); // return null
+            };
+
+
+            inner->FullScan(scan_ctx, callback, 1);
+            return true;
+        }
+        return false;
+    }
+
+protected:
+    Status DeepCopy_Internal(IAsyncContext *&context_copy) {
+        return IAsyncContext::DeepCopy_Internal(*this, context_copy);
+    }
+
+private:
+    parser_t *parser;
+    store_t *inner;
     uint32_t cnt;
 };
