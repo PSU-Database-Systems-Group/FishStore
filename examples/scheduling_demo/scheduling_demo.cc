@@ -35,33 +35,42 @@ int main(int argc, char **argv) {
         assert(result == Status::Ok);
     };
 
-    auto start = std::chrono::steady_clock::now();
+/*    auto start = std::chrono::steady_clock::now();
     people->FullScan(scan_context, callback, 1);
     people->CompletePending(true);
     auto end = std::chrono::steady_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
-              << std::endl;
+              << std::endl;*/
+/*
 
-//
-//    start = std::chrono::steady_clock::now();
-//    JsonInlineScanContext ez_psf_ctx(people_psf, 1);
-//    people->Scan(ez_psf_ctx, callback, 1);
-//    people->CompletePending(true);
-//    end = std::chrono::steady_clock::now();
-//    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (psf)" << std::endl;
-//
-
-    AdapterBadJoinContext<disk_t, adapter_t> join_ctx({"id"}, jobs.get());
-
-
-
-     start = std::chrono::steady_clock::now();
-    people->FullScan(join_ctx, callback, 1);
+    start = std::chrono::steady_clock::now();
+    JsonInlineScanContext ez_psf_ctx(people_psf, 1);
+    people->Scan(ez_psf_ctx, callback, 1);
     people->CompletePending(true);
     end = std::chrono::steady_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
-              << std::endl;
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (psf)" << std::endl;
+*/
 
+    {
+        FullScanAdapterJoinContext<disk_t, adapter_t, BadInnerJoinContext<adapter_t>> join_ctx({"id"}, jobs.get());
+        std::cout << "\nStarting FullScan with BadInnerJoin" << std::endl;
+        auto start = std::chrono::steady_clock::now();
+        people->FullScan(join_ctx, callback, 1);
+        people->CompletePending(true);
+        auto end = std::chrono::steady_clock::now();
+        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
+                  << std::endl;
+    }
+    {
+        ScanAdapterJoinContext<disk_t, adapter_t, HashInnerJoinContext> join_ctx({"id"}, jobs.get(), job_psf);
+        std::cout << "\nStarting FullScan with HashInnerJoin" << std::endl;
+        auto start = std::chrono::steady_clock::now();
+        people->FullScan(join_ctx, callback, 1);
+        people->CompletePending(true);
+        auto end = std::chrono::steady_clock::now();
+        std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)"
+                  << std::endl;
+    }
 
     people->StopSession();
     jobs->StopSession();

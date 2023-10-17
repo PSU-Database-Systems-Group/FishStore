@@ -29,6 +29,8 @@ std::unique_ptr<store_t> storeFromFile(const std::string &file_path, int &psf_id
     std::vector<std::string> batches;
     std::ifstream in(file_path);
 
+    assert(!in.fail());
+
     std::string line;
     size_t json_batch_count, line_count, record_count;
     json_batch_count = line_count = record_count = 0;
