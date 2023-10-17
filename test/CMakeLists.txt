@@ -34,4 +34,7 @@ endif()
 
 ADD_FISHSTORE_TEST(simdjson_adapter_test "")
 
+ADD_FISHSTORE_TEST(nulldisk_test "")
+
+
 add_subdirectory(ezpsf)
