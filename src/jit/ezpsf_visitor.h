@@ -225,7 +225,7 @@ namespace fishstore::ezpsf::ast {
                     return (ExprAst *) new LitDoubleAst(std::stod(ctx->getText()));
                 else if (ctx->STRING() != nullptr) {
                     std::string text = ctx->getText();
-                    return (ExprAst *) new LitStringAst(text.substr(1, text.length() - 1));
+                    return (ExprAst *) new LitStringAst(text.substr(1, text.length() - 2));
                 } else if (ctx->TRUE() != nullptr)
                     return (ExprAst *) new LitBoolAst(true);
                 else if (ctx->FALSE() != nullptr)

@@ -60,14 +60,12 @@ public:
 
     inline bool check(const char *payload, uint32_t payload_size) {
         parser->Load(payload, payload_size);
-
         // check to make sure the parser has a value
         bool check = parser->HasNext();
         assert(check);
 
         record_t rec = parser->NextRecord();
         assert(!parser->HasNext());
-
 
         // evaluate
         Nullable<T> ret = eval_(rec.GetFields());

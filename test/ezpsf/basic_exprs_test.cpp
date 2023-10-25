@@ -119,6 +119,23 @@ TEST_F(BasicJitFixture, StringComparison) {
     }
 }
 
+TEST_F(BasicJitFixture, StringComparisonLiterals){
+    std::vector<std::string> xyInputs = {"a", "ab", "hello", "z", "wonderful", "abc", "OTHER"};
+    RecBatchInsert("x.y", xyInputs);
+    PsfInfo psf = getPsf("StringComparisonLiterals => (Str) x.y == \"abc\"");
+
+    ASSERT_EQ(psf.fields.size(), 1);
+    ASSERT_EQ(psf.fields[0], "x.y");
+    ASSERT_EQ(psf.type, DataType::BOOL_T) << getName(psf.type);
+    for (size_t i = 0; i < xyInputs.size(); ++i) {
+        bool value = false;
+        bool hasValue = psf.psf(&records[i], &value);
+        ASSERT_TRUE(hasValue);
+        bool real_value = xyInputs[i] == "abc";
+        ASSERT_EQ(real_value, value) << xyInputs[i] << " as 'x.y'. Iteration: " << i;
+    }
+}
+
 TEST_F(BasicJitFixture, IntegerComparison) {
     std::vector<int> xyInputs = {0, 1, 3, 5, 20, 100, -40, -100, -1, -4};
     std::vector<int> abInputs = {3, 2, 7, 0, -4, -28, 105, 2801, 80, 0};
@@ -227,3 +244,4 @@ TEST_F(BasicJitFixture, BitwiseArithmetic) {
                                     << xyInputs[i] << " as 'x.y', and " << abInputs[i] << " as 'a.b'. Iteration: " << i;
     }
 }
+

@@ -1002,7 +1002,7 @@ namespace fishstore::core {
                 if (!flag) {
                     NullableInt res;
                     if (psf.lib_id == LIB_EZ_PSF) {
-                        int32_t value;
+                        int32_t value = 0;
                         bool has_value = psf.ez_eval(&psf_args, &value);
                         res = {!has_value, value};
                     } else
