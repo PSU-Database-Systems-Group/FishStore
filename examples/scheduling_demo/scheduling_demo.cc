@@ -4,12 +4,58 @@
 
 
 
+#include "scan_scheduler.h"
 #include "scan_contexts.h"
 #include "misc.h"
 
-
 // main method
 int main(int argc, char **argv) {
+    auto pair = storeFromFile("/scratch/mnorfolk/FishStore/src/adapters/all.json", {
+            PsfAction{"(Str) type == \"PushEvent\"", 0, 500000}
+    });
+    auto store = std::move(pair.first);
+    auto map = std::move(pair.second);
+
+    auto plan = plan_scans(store.get(), map);
+    execute_scans(store.get(), plan);
+
+
+    /* auto tweets = storeFromFile("/scratch/mnorfolk/Data/json/srilanka_floods_2017.json", {
+             {0,    [&full_psf_id](store_t *store) {
+                 // add PSF
+                 std::vector<ParserAction> parser_actions;
+                 PsfLookup psf = store->MakeEzPsf("(Str) class_label == \"not_humanitarian\"");
+                 parser_actions.push_back({REGISTER_INLINE_PSF, psf.id});
+                 store->ApplyParserShift(parser_actions, [](uint64_t s_addr) {
+
+                 });
+                 store->CompleteAction(true);
+                 full_psf_id = psf.id;
+             }},
+             {3637248, [&partial_psf_id, &partial_reg_addr](store_t *store) {
+                 // add PSF
+                 std::vector<ParserAction> parser_actions;
+                 PsfLookup psf = store->MakeEzPsf("(Str) class_label == \"not_humanitarian\"");
+                 parser_actions.push_back({REGISTER_INLINE_PSF, psf.id});
+                 store->ApplyParserShift(parser_actions, [&partial_reg_addr](uint64_t s_addr) {
+                     partial_reg_addr = s_addr;
+                 });
+                 store->CompleteAction(true);
+                 partial_psf_id = psf.id;
+             }}
+     });*/
+
+/*    PsfMap map;
+    map.insert({1, {1, 0, 25, 0}});
+    map.insert({2, {2, 30, 80, 4}});
+    map.insert({3, {3, 50, 60, 0}});
+    map.insert({4, {4, 60, 120, 3}});
+    map.insert({5, {5, 40, 50, 5}});
+    schedule2(nullptr, map, 0, 100);*/
+
+
+
+    /*
     uint32_t full_psf_id;
 
     uint32_t partial_psf_id;
@@ -88,7 +134,7 @@ int main(int argc, char **argv) {
         auto end = std::chrono::steady_clock::now();
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)\n"
                   << std::endl;
-    }
+    }*/
 }
 
 /*    int job_psf;

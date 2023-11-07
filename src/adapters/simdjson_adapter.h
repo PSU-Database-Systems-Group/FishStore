@@ -18,10 +18,10 @@
 
 constexpr size_t DEFAULT_BATCH_SIZE = 1 << 24;
 
-using namespace simdjson;
 
 namespace fishstore {
     namespace adapter {
+        using namespace simdjson;
 
         // Represents a SimdJson field
         class SIMDJsonField {

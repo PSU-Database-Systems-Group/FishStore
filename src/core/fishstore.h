@@ -306,6 +306,9 @@ namespace fishstore::core {
         // Creates a new PSF. It's information will be returned as a Psf Lookup
         PsfLookup MakeEzPsf(const std::string &ez_psf_str);
 
+        // returns the PSF info for the given id
+        ezpsf::PsfInfo getPsfInfoById(uint32_t id);
+
         void PrintRegistration();
 
 #ifdef _WIN32
@@ -573,6 +576,7 @@ namespace fishstore::core {
 
         // maps a PSF name to it's IR. This is used later for recovery.
         std::unordered_map<std::string, std::string> psf_irs;
+        std::unordered_map<uint32_t, ezpsf::PsfInfo> psf_info_map;
     };
 
 // Implementations.
@@ -4065,6 +4069,7 @@ return OperationStatus::SUCCESS;
         ezpsf::PsfInfo psf_info = ezpsf::getPsf(ez_psf_str, jit.get());
         psf_irs.insert({psf_info.name, psf_info.ir});
 
+
         std::vector<uint16_t> field_ids;
         field_ids.reserve(psf_info.fields.size());
 
@@ -4099,6 +4104,8 @@ return OperationStatus::SUCCESS;
             inline_psf_map.push_back(psf);
             auto lookup = PsfLookup{static_cast<uint32_t>(inline_psf_id), PsfType::INLINE};
             named_psfs.insert({psf_info.name, lookup});
+
+            psf_info_map.insert({inline_psf_id, psf_info});
             return lookup;
         } else {
             GeneralPSF<A> psf;
@@ -4118,10 +4125,16 @@ return OperationStatus::SUCCESS;
             general_psf_map.push_back(psf);
             auto lookup = PsfLookup{static_cast<uint32_t>(general_psf_id), PsfType::INLINE};
             named_psfs.insert({psf_info.name, lookup});
+
+            psf_info_map.insert({general_psf_id, psf_info});
             return lookup;
         }
     }
 
+    template<class D, class A>
+    ezpsf::PsfInfo FishStore<D, A>::getPsfInfoById(uint32_t id){
+        return psf_info_map.at(id);
+    }
 
     template<class D, class A>
     void FishStore<D, A>::ParserStateApplyActions(

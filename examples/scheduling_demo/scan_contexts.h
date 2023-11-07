@@ -7,6 +7,7 @@
 
 #include "adapters/simdjson_adapter.h"
 #include "core/fishstore.h"
+#include "misc.h"
 
 /////////////////////////////////////////////////////
 // Typedefs
@@ -15,7 +16,6 @@
 template<typename T>
 using Nullable = fishstore::adapter::Nullable<T>;
 
-typedef fishstore::adapter::StringRef StringRef;
 
 // A function similar to an EzPsf, but it will be run after the data has already
 // been ingested during a Scan
@@ -350,5 +350,50 @@ private:
     parser_t *parser;
     store_t *inner;
     uint32_t inner_psf_id;
+    uint32_t cnt;
+};
+
+/////////////////////////////////////////////////////
+// actually used contexts for table scans
+/////////////////////////////////////////////////////
+
+
+// full scans used by the query planner/executor
+class PlanFullScanContext : public IAsyncContext {
+public:
+    PlanFullScanContext() = delete;
+
+    PlanFullScanContext(const std::vector<PsfFallback> &check_funcs)
+            : check_funcs(check_funcs),
+              cnt(0) {
+    }
+
+    inline void Touch(const char *payload, uint32_t payload_size) {
+        // printf("Record Hit: %.*s\n", payload_size, payload);
+        ++cnt;
+    }
+
+    inline void Finalize() {
+        printf("%u record has been touched...\n", cnt);
+    }
+
+    inline bool check(const char *payload, uint32_t payload_size) {
+        StringRef ref{payload, payload_size};
+        for (const auto &func: check_funcs) {
+            auto nullable = func(ref);
+            if (!nullable.HasValue()) {
+                return false;
+            }
+        }
+        return false;
+    }
+
+protected:
+    Status DeepCopy_Internal(IAsyncContext *&context_copy) override {
+        return IAsyncContext::DeepCopy_Internal(*this, context_copy);
+    }
+
+private:
+    std::vector<PsfFallback> check_funcs;
     uint32_t cnt;
 };
