@@ -18,7 +18,7 @@
 #include "safe_typedef.h"
 
 #define SCALE_FACTOR 1
-#define MAX_RECORDS 1000000
+#define MAX_RECORDS 10000
 
 typedef fishstore::device::NullDisk disk_t;
 typedef fishstore::adapter::SIMDJsonAdapter adapter_t;
@@ -27,15 +27,13 @@ using store_t = fishstore::core::FishStore<disk_t, adapter_t>;
 
 typedef fishstore::adapter::StringRef StringRef;
 
-
-/*struct PsfTimestamp : Value<uint64_t, PsfTimestamp> {
-    PsfTimestamp(uint64_t t) : Value<uint64_t, PsfTimestamp>(t) {}
-};*/
-
-typedef uint64_t PsfTimestamp;
+typedef uint64_t PsfAddress;
+typedef uint32_t PsfId;
 
 // maps fishstore Record => nullable int
 typedef std::function<fishstore::adapter::NullableInt(StringRef)> PsfFallback;
+
+typedef std::function<bool(StringRef)> FilterFunction;
 
 // Creates a fallback Psf function that can be called on a record and initializer an adapter with the correct
 // fields necessary for the PSF to work properly
@@ -44,32 +42,41 @@ PsfFallback makeFallback(fishstore::ezpsf::PsfInfo ez_psf, typename A::parser_t 
     parser = A::NewParser(ez_psf.fields);
     return [ez_psf, parser](StringRef payload) {
         parser->Load(payload.Data(), payload.Length());
-        assert(parser->HasNext());
+        printf("Payload: [%.*s]\n", (int) payload.Length(), payload.Data());
+        bool check = parser->HasNext();
+        assert(check);
 
-        auto record = parser->NextRecord();
-        int res;
+        // get fields &
+        auto record = parser->NextRecord().GetFields();
+        if (record.size() != ez_psf.fields.size())
+            return fishstore::adapter::NullableInt{false};
+
+        int res = 0;
         bool has_value = ez_psf.psf(&record, &res);
         return fishstore::adapter::NullableInt{!has_value, res};
     };
 }
 
+constexpr PsfId FS_ID = -1;
+
 struct PsfInfo {
-    PsfInfo(uint32_t id, PsfFallback fallback) : id(id), fallback(std::move(fallback)) {}
+    PsfInfo(PsfId id, PsfFallback fallback) : id(id), fallback(std::move(fallback)) {}
 
-    PsfInfo(uint32_t id, PsfTimestamp start, PsfTimestamp end) : id(id), start(start), end(end), preference(0) {}
+    PsfInfo(PsfId id, PsfAddress start, PsfAddress end, PsfFallback fallback)
+            : id(id), start(start), end(end), preference(0), fallback(std::move(fallback)) {}
 
-    PsfInfo(uint32_t id, PsfTimestamp start, PsfTimestamp end, int selectivity) : id(id), start(start), end(end),
-                                                                                  preference(selectivity) {}
+    PsfInfo(PsfId id, PsfAddress start, PsfAddress end, int selectivity) : id(id), start(start), end(end),
+                                                                           preference(selectivity) {}
 
-    uint32_t id;
-    PsfTimestamp start;
-    PsfTimestamp end;
+    PsfId id;
+    PsfAddress start;
+    PsfAddress end;
     int preference; // prefer higher preference for psfs scans
     PsfFallback fallback;
 };
 
 // Maps PSF id to PsfInfo
-typedef std::map<uint32_t, PsfInfo> PsfMap;
+typedef std::map<PsfId, PsfInfo> PsfMap;
 
 struct PsfAction {
     PsfAction(std::string ez_psf, uint64_t records_before, uint64_t records_covered)
@@ -135,7 +142,7 @@ storeFromFile(const std::string &file_path, const std::vector<PsfAction> &action
 
     PsfMap return_map;
     // maps timestamp to an action => register or deregister PSF with id
-    std::map<uint64_t, std::pair<ActionType, uint32_t>> psf_map;
+    std::map<PsfAddress, std::pair<ActionType, PsfId>> psf_map;
     for (const auto &item: actions) {
         auto psf_lookup = store->MakeEzPsf(item.ez_psf);
         psf_map.insert({item.records_before, {ActionType::REG, psf_lookup.id}});
@@ -158,29 +165,35 @@ storeFromFile(const std::string &file_path, const std::vector<PsfAction> &action
             store->BatchInsert(batches[i], 1);
         }
         store->Refresh();
+
+
+        // Register PSF
         std::vector<ParserAction> parser_actions;
-        uint32_t psf_id = it.second.second;
+        PsfId psf_id = it.second.second;
         switch (it.second.first) { // psf_map => action type
             case ActionType::REG:
-                printf("finished inserting %8lu/%lu records before registering.   psf %d.\n", i, batches.size(),
-                       psf_id);
+                PsfAddress start_addr;
                 parser_actions.push_back({REGISTER_INLINE_PSF, psf_id});
-                store->ApplyParserShift(parser_actions, [psf_id, &return_map](uint64_t s_addr) {
-                    return_map.at(psf_id).start = s_addr;
+                store->ApplyParserShift(parser_actions, [&start_addr](PsfAddress s_addr) {
+                    start_addr = s_addr;
                 });
+                return_map.at(psf_id).start = start_addr;
                 store->CompleteAction(true);
+                printf("finished inserting %8lu/%lu records before registering.   psf %d [Address:%lu].\n",
+                       i, batches.size(), psf_id, start_addr);
                 break;
             case ActionType::DEREG:
-                printf("finished inserting %8lu/%lu records before deregistering. psf %d.\n", i, batches.size(),
-                       psf_id);
+
                 parser_actions.push_back({DEREGISTER_INLINE_PSF, psf_id});
-                uint64_t e_addr = store->ApplyParserShift(parser_actions, [](uint64_t s_addr) {});
-                return_map.at(psf_id).end = e_addr;
+                PsfAddress end_addr = store->ApplyParserShift(parser_actions, [](PsfAddress s_addr) {});
+                return_map.at(psf_id).end = end_addr;
                 store->CompleteAction(true);
+                printf("finished inserting %8lu/%lu records before deregistering. psf %d  [Address:%lu].\n",
+                       i, batches.size(), psf_id, end_addr);
                 break;
         }
     }
-
+    printf("Finished Main ingestions: [Remaining]\n");
     // insert everything remaining
     for (; i < batches.size(); ++i)
         store->BatchInsert(batches[i], 1);

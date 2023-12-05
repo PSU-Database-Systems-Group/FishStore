@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "adapters/simdjson_adapter.h"
 #include "core/fishstore.h"
 #include "misc.h"
@@ -70,7 +72,7 @@ public:
         // evaluate
         Nullable<T> ret = eval_(rec.GetFields());
         if (ret.HasValue()) {
-            chosen_values.emplace_back(ret.Value());
+//            chosen_values.emplace_back(ret.Value());
             return true;
         }
         return false;
@@ -82,7 +84,7 @@ protected:
     }
 
 private:
-    std::vector<T> chosen_values;
+//    std::vector<T> chosen_values;
     parser_t *parser;
     expr_eval eval_;
     uint32_t cnt;
@@ -363,8 +365,8 @@ class PlanFullScanContext : public IAsyncContext {
 public:
     PlanFullScanContext() = delete;
 
-    PlanFullScanContext(const std::vector<PsfFallback> &check_funcs)
-            : check_funcs(check_funcs),
+    PlanFullScanContext(FilterFunction check_func)
+            : check_func(std::move(check_func)),
               cnt(0) {
     }
 
@@ -378,14 +380,7 @@ public:
     }
 
     inline bool check(const char *payload, uint32_t payload_size) {
-        StringRef ref{payload, payload_size};
-        for (const auto &func: check_funcs) {
-            auto nullable = func(ref);
-            if (!nullable.HasValue()) {
-                return false;
-            }
-        }
-        return false;
+        return check_func({payload, payload_size});
     }
 
 protected:
@@ -394,6 +389,51 @@ protected:
     }
 
 private:
-    std::vector<PsfFallback> check_funcs;
+    FilterFunction check_func;
     uint32_t cnt;
+};
+
+class PlanScanContext : public IAsyncContext {
+public:
+    PlanScanContext() = delete;
+
+    PlanScanContext(PsfId id, uint32_t value, FilterFunction check_func)
+            : id(id), value(value), check_func(std::move(check_func)), cnt(0) {
+    }
+
+    inline void Touch(const char *payload, uint32_t payload_size) {
+        // printf("Record Hit: %.*s\n", payload_size, payload);
+        ++cnt;
+    }
+
+    inline void Finalize() {
+        printf("%u record has been touched...\n", cnt);
+    }
+
+    inline bool check(const fishstore::core::KeyPointer *kpt) {
+        if (!(kpt->mode == 1 && kpt->inline_psf_id == id && kpt->value == value))
+            return false;
+        // necessary but not sufficient
+
+        auto record = kpt->get_record();
+        auto payload = record->payload();
+        auto payload_size = record->payload_size();
+
+        return check_func({payload,payload_size});
+    }
+
+    [[nodiscard]] inline fishstore::core::KeyHash get_hash() const {
+        return fishstore::core::KeyHash{fishstore::core::Utility::GetHashCode(id, value)};
+    }
+
+protected:
+    Status DeepCopy_Internal(IAsyncContext *&context_copy) override {
+        return IAsyncContext::DeepCopy_Internal(*this, context_copy);
+    }
+
+private:
+    FilterFunction check_func;
+    uint32_t cnt;
+    uint32_t value;
+    PsfId id;
 };

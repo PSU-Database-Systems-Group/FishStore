@@ -7,11 +7,17 @@
 #include "scan_scheduler.h"
 #include "scan_contexts.h"
 #include "misc.h"
+#include "legacy.h"
 
 // main method
 int main(int argc, char **argv) {
+
+//    legacy::main(argc, argv);
+
+//    return 0;
+
     auto pair = storeFromFile("/scratch/mnorfolk/FishStore/src/adapters/all.json", {
-            PsfAction{"(Str) type == \"PushEvent\"", 0, 500000}
+            PsfAction{"(Str) type == \"PushEvent\"", 0, MAX_RECORDS / 5}
     });
     auto store = std::move(pair.first);
     auto map = std::move(pair.second);
@@ -135,6 +141,7 @@ int main(int argc, char **argv) {
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms (fullscan)\n"
                   << std::endl;
     }*/
+    return 0;
 }
 
 /*    int job_psf;
