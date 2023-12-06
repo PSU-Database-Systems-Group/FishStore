@@ -11,8 +11,11 @@
 #include <device/file_system_disk.h>
 
 using handler_t = fishstore::environment::QueueIoHandler;
-
+#ifdef USE_EZPSF
+#define CLASS CheckpointTest_QueueEzPsf
+#else
 #define CLASS CheckpointTest_Queue
+#endif
 #include "checkpoint_test.h"
 #undef CLASS
 
