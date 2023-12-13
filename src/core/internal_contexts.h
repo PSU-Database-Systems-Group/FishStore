@@ -347,6 +347,51 @@ class PendingInsertContext : public AsyncPendingInsertContext {
   }
 };
 
+/////////////////////////////////////////////////////
+// Helper functions that will use SFINAE to allow Touch & check to have either a record* or
+// char* payload, size_t payload_size as the argument.
+//
+// see: https://en.wikipedia.org/wiki/Substitution_failure_is_not_an_error
+// written using some help from Microsoft Bing chat AI
+/////////////////////////////////////////////////////
+
+namespace SfinaeHelper {
+
+    // std::enable_if will fail for SFINAE if the boolean evaluates to false
+    // the boolean is std::is_same_v which will check that the two types are the same
+    // the first type is the return type of calling check with that information (in this case,
+    // a ptr + int
+    // if this exists and the return type is bool then they are the same
+    // if they're the same the bool evaluates to true and thus the enable_if is valid
+    // the last bool is to represent that callCheck should return a bool as well.
+    template<typename SC>
+    std::enable_if_t<std::is_same_v<decltype(std::declval<SC>().check(nullptr, 0)), bool>, bool>
+    callCheck(SC& ctx, const Record* rec) {
+        return ctx.check(rec->payload(), rec->payload_size());
+    }
+
+    template<typename SC>
+    std::enable_if_t<std::is_same_v<decltype(std::declval<SC>().check(nullptr)), bool>, bool>
+    callCheck(SC& ctx, const Record* rec) {
+        return ctx.check(rec);
+    }
+
+    template<typename SC>
+    std::enable_if_t<std::is_same_v<decltype(std::declval<SC>().Touch(nullptr, 0)), void>, void>
+    callTouch(SC& ctx, const Record* rec) {
+        ctx.Touch(rec->payload(), rec->payload_size());
+    }
+
+    template<typename SC>
+    std::enable_if_t<std::is_same_v<decltype(std::declval<SC>().check(nullptr)), void>, void>
+    callTouch(SC& ctx, const Record* rec) {
+        ctx.Touch(rec);
+    }
+}
+
+
+
+
 /// FishStore's internal Scan() context.
 /// An internal Scan() context that has gone async and lost its type information.
 class AsyncPendingScanContext : public PendingContext {
@@ -412,7 +457,8 @@ class PendingScanContext : public AsyncPendingScanContext {
  public:
   inline void Touch(const void* rec) final {
     const record_t* record = reinterpret_cast<const record_t*>(rec);
-    scan_context().Touch(record->payload(), record->payload_size());
+    SfinaeHelper::callTouch(scan_context(),record);
+    //scan_context().Touch(record->payload(), record->payload_size());
   }
 
   inline void Finalize() final {
@@ -442,7 +488,7 @@ class AsyncPendingFullScanContext : public PendingContext {
  public:
   virtual void Touch(const void* rec) = 0;
   virtual void Finalize() = 0;
-  virtual bool check(const char* payload, uint32_t payload_size) = 0;
+  virtual bool check(const void* rec) = 0;
 };
 
 template <class SC>
@@ -476,15 +522,18 @@ class PendingFullScanContext : public AsyncPendingFullScanContext {
  public:
   inline void Touch(const void* rec) final {
     const record_t* record = reinterpret_cast<const record_t*>(rec);
-    scan_context().Touch(record->payload(), record->payload_size());
+    SfinaeHelper::callTouch(scan_context(), record);
+    //scan_context().Touch(record->payload(), record->payload_size());
   }
 
   inline void Finalize() final {
     scan_context().Finalize();
   }
 
-  inline bool check(const char* payload, uint32_t payload_size) final {
-    return scan_context().check(payload, payload_size);
+  inline bool check(const void* rec) final {
+      const record_t* record = reinterpret_cast<const record_t*>(rec);
+      return SfinaeHelper::callCheck(scan_context(), record);
+//    return scan_context().check(payload, payload_size);
   }
 };
 

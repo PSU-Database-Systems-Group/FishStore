@@ -1612,7 +1612,7 @@ tot_memcpy_time += std::chrono::duration<double>(t_memcpy_end - t_memcpy_start).
                 }
 
                 if (!record->header.invalid &&
-                    pending_context.check(record->payload(), record->payload_size())) {
+                    pending_context.check(record)) {
                     pending_context.Touch(record);
                 }
 
@@ -2311,7 +2311,7 @@ return OperationStatus::SUCCESS;
                     continue;
                 }
                 if (!record->header.invalid &&
-                    pending_context->check(record->payload(), record->payload_size())) {
+                    pending_context->check(record)) {
                     // Got a hit.
                     pending_context->Touch(record);
                 }
