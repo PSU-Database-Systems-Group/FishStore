@@ -1,4 +1,12 @@
-set(BENCHMARK_HEADERS "scan_contexts.h" "misc.h" "scan_scheduler.h" "safe_typedef.h" "legacy.h"
+set(BENCHMARK_HEADERS
+        "scan_contexts.h"
+        "misc.h"
+        "table_scans.h"
+        "types.h"
+        "legacy.h"
+        "filter.h"
+        "projection.h"
+        "record_helper.h"
 )
 
 set(BENCHMARK_SOURCES

@@ -264,4 +264,62 @@ namespace legacy {
         return 0;
     }
 
+    // COUNT(*) FROM ... WHERE ...
+    void schedule(store_t *store, const PsfMap &map,
+                  PsfAddress start = 0, PsfAddress end = Address::kMaxAddress) {
+
+        std::map<PsfAddress, uint32_t> start_time;
+        std::map<PsfAddress, uint32_t> end_time;
+        for (const auto &item: map) {
+            start_time.emplace(item.second.start, item.first);
+            end_time.emplace(item.second.end, item.first);
+        }
+
+        auto s_it = start_time.begin();
+        auto e_it = end_time.begin();
+
+        std::vector<PsfInfo> used_info;
+
+        while (start != end) {
+            if (s_it == start_time.end())
+                break;
+
+            uint32_t psf = s_it->second;
+            PsfInfo info = map.at(psf);
+
+            // if it ends before this one starts, skip
+            if (info.end < start) {
+                s_it++;
+            } else if (s_it->first <= start) {
+                info.start = start;
+                used_info.push_back(info);
+                start = info.end; // new start is where this one ends
+
+                s_it++;
+            } else {
+                uint32_t future_psf = s_it->second;
+                PsfInfo future_info = map.at(future_psf);
+                PsfAddress full_scan_end = future_info.start;
+                PsfInfo full_scan = {0, start, full_scan_end, nullptr};
+                used_info.push_back(full_scan);
+
+                start = full_scan_end;
+            }
+        }
+
+        // failsafe
+        /*if (start != end) {
+            PsfInfo full_scan = {0, start, end, nullptr};
+            used_info.push_back(full_scan);
+        }*/
+
+        printf("\n\n\nEnd:\n");
+
+        for (const auto &item: used_info) {
+            if (item.id == 0) {
+                printf("FullScan: [%lu, %lu]\n", item.start, item.end);
+            } else
+                printf("PSF '%2d': [%lu, %lu]\n", item.id, item.start, item.end);
+        }
+    }
 }

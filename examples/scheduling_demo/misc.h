@@ -15,25 +15,7 @@
 #include "device/null_disk.h"
 #include "adapters/simdjson_adapter.h"
 
-#include "safe_typedef.h"
-
-#define SCALE_FACTOR 1
-#define MAX_RECORDS 10000
-
-typedef fishstore::device::NullDisk disk_t;
-typedef fishstore::adapter::SIMDJsonAdapter adapter_t;
-using store_t = fishstore::core::FishStore<disk_t, adapter_t>;
-
-
-typedef fishstore::adapter::StringRef StringRef;
-
-typedef uint64_t PsfAddress;
-typedef uint32_t PsfId;
-
-// maps fishstore Record => nullable int
-typedef std::function<fishstore::adapter::NullableInt(StringRef)> PsfFallback;
-
-typedef std::function<bool(StringRef)> FilterFunction;
+#include "types.h"
 
 // Creates a fallback Psf function that can be called on a record and initializer an adapter with the correct
 // fields necessary for the PSF to work properly
@@ -42,7 +24,6 @@ PsfFallback makeFallback(fishstore::ezpsf::PsfInfo ez_psf, typename A::parser_t 
     parser = A::NewParser(ez_psf.fields);
     return [ez_psf, parser](StringRef payload) {
         parser->Load(payload.Data(), payload.Length());
-        printf("Payload: [%.*s]\n", (int) payload.Length(), payload.Data());
         bool check = parser->HasNext();
         assert(check);
 
@@ -56,27 +37,6 @@ PsfFallback makeFallback(fishstore::ezpsf::PsfInfo ez_psf, typename A::parser_t 
         return fishstore::adapter::NullableInt{!has_value, res};
     };
 }
-
-constexpr PsfId FS_ID = -1;
-
-struct PsfInfo {
-    PsfInfo(PsfId id, PsfFallback fallback) : id(id), fallback(std::move(fallback)) {}
-
-    PsfInfo(PsfId id, PsfAddress start, PsfAddress end, PsfFallback fallback)
-            : id(id), start(start), end(end), preference(0), fallback(std::move(fallback)) {}
-
-    PsfInfo(PsfId id, PsfAddress start, PsfAddress end, int selectivity) : id(id), start(start), end(end),
-                                                                           preference(selectivity) {}
-
-    PsfId id;
-    PsfAddress start;
-    PsfAddress end;
-    int preference; // prefer higher preference for psfs scans
-    PsfFallback fallback;
-};
-
-// Maps PSF id to PsfInfo
-typedef std::map<PsfId, PsfInfo> PsfMap;
 
 struct PsfAction {
     PsfAction(std::string ez_psf, uint64_t records_before, uint64_t records_covered)

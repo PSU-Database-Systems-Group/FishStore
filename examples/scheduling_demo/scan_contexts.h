@@ -9,7 +9,7 @@
 
 #include "adapters/simdjson_adapter.h"
 #include "core/fishstore.h"
-#include "misc.h"
+#include "filter.h"
 
 /////////////////////////////////////////////////////
 // Typedefs
@@ -365,7 +365,7 @@ class PlanFullScanContext : public IAsyncContext {
 public:
     PlanFullScanContext() = delete;
 
-    PlanFullScanContext(FilterFunction check_func)
+    PlanFullScanContext(Filter check_func)
             : check_func(std::move(check_func)),
               cnt(0) {
     }
@@ -380,7 +380,7 @@ public:
     }
 
     inline bool check(const char *payload, uint32_t payload_size) {
-        return check_func({payload, payload_size});
+        return check_func.check(FS_ID, {payload, payload_size});
     }
 
 protected:
@@ -389,7 +389,7 @@ protected:
     }
 
 private:
-    FilterFunction check_func;
+    Filter check_func;
     uint32_t cnt;
 };
 
@@ -397,7 +397,7 @@ class PlanScanContext : public IAsyncContext {
 public:
     PlanScanContext() = delete;
 
-    PlanScanContext(PsfId id, uint32_t value, FilterFunction check_func)
+    PlanScanContext(PsfId id, uint32_t value, Filter check_func)
             : id(id), value(value), check_func(std::move(check_func)), cnt(0) {
     }
 
@@ -419,7 +419,7 @@ public:
         auto payload = record->payload();
         auto payload_size = record->payload_size();
 
-        return check_func({payload,payload_size});
+        return check_func.check(id, {payload, payload_size});
     }
 
     [[nodiscard]] inline fishstore::core::KeyHash get_hash() const {
@@ -432,7 +432,7 @@ protected:
     }
 
 private:
-    FilterFunction check_func;
+    Filter check_func;
     uint32_t cnt;
     uint32_t value;
     PsfId id;

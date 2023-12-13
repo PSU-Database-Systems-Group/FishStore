@@ -4,10 +4,11 @@
 
 
 
-#include "scan_scheduler.h"
+#include "table_scans.h"
 #include "scan_contexts.h"
 #include "misc.h"
 #include "legacy.h"
+#include "projection.h"
 
 // main method
 int main(int argc, char **argv) {
@@ -23,7 +24,7 @@ int main(int argc, char **argv) {
     auto map = std::move(pair.second);
 
     auto plan = plan_scans(store.get(), map);
-    execute_scans(store.get(), plan);
+    //execute_scans(store.get(), plan);
 
 
     /* auto tweets = storeFromFile("/scratch/mnorfolk/Data/json/srilanka_floods_2017.json", {
